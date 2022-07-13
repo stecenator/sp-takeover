@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+import sys
+import os
+import re
+from optparse import OptionParser
+
+"""
+sp-takeover - Przełącza instancję IBM Spectrum Protect ze zdalnego hosta/ośrodka na biężący host. 
+"""
+use = "Usage: %prog  [-f|--force]"
+
+parser = OptionParser(usage=use)
+parser.add_option("-f", "--force", action="store_true", dest="force", help="Forsuje przełączenie na niezsynchronizowanych macierzach.", default=False)
+
+(options, args) = parser.parse_args()
+
+print(f"Forsowanie: {options.force}")
