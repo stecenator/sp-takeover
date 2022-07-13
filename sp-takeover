@@ -1,17 +1,95 @@
 #!/usr/bin/env python3
-import sys
-import os
-import re
-from optparse import OptionParser
-
 """
 sp-takeover - Przełącza instancję IBM Spectrum Protect ze zdalnego hosta/ośrodka na biężący host. 
 """
-use = "Usage: %prog  [-f|--force]"
+import sys
+import re
+import configparser
+from optparse import OptionParser
+from os.path import isfile
+from os import access, R_OK
+
+# Klasy, funkcje pomocniczne i zmienne pomocnicze
+class TxColors:
+	""" Terminal color const definition. """
+	HEADER = '\033[95m'
+	OKBLUE = '\033[94m'
+	OKGREEN = '\033[92m'
+	WARNING = '\033[93m'
+	FAIL = '\033[91m'
+	ENDC = '\033[0m'
+	BOLD = '\033[1m'
+	UNDERLINE = '\033[4m'
+
+DEBUG=False
+VERBOSE=False
+
+def dbg(facility, message):
+	""" Wypisuje \"facility:\tmesage\" jezeli program jest wywołany z opcją -d lub --debug."""
+	if DEBUG:
+		print(f"{TxColors.WARNING}{facility}:{TxColors.ENDC}\t{message}")
+
+def verb(message):
+	""" Wypisuje mesage, jezeli program jest wywołany z opcją -v lub --verbose."""
+	if VERBOSE:
+		print(f"{TxColors.OKGREEN}{message}{TxColors.ENDC}")
+
+def err(facility, message):
+	""" Wypisuje na stderr komunikat \"facility:\tmesage\". """
+	print(f"{TxColors.FAIL}{facility}:{TxColors.ENDC}\t{message}", file=stderr)
+
+# Funkcje programu
+
+def read_config(cfgFile):
+	""" Tworzy konfigurację z pliku config.ini albo innego podanego po -i|--config."""
+	dbg("read_config", f"Sprawdzanie dostępności pliku {cfgFile}.")
+	assert isfile(cfgFile) and access(cfgFile, R_OK), f"Nie można odczytać pliku {cfgFile}."
+	cfg = configparser.ConfigParser()
+	cfg.read(cfgFile)
+	dbg("read_config", f"Przeczytano {cfgFile}. Sekcje:")
+	if DEBUG:
+		sections = cfg.sections()
+		print(sections)
+		site = cfg['DEFAULT']['localsite'].lower()	# bo sekcje i klucze są składowane przez obiek cfg jako lowercase
+		print(f"Site: {site}")
+		# for sec in sections:
+		# 	print(f"[{sec}]")
+		for key in cfg[site]:
+			print(f"{key} :\t{cfg[site][key]}")
+
+	return cfg
+
+def validate_env(cfg):
+	""" Weryfikuje wszystkie ustawienia na podstawie globalnej zmiennej config utworzenej przez read_config."""
+	dbg("validate_env", f"Weryfikacja środowiska.")
+	# dbg("validate_env", f"Instancja {cfg['cfg'")
+
+
+# MAIN
+
+use = "Usage: %prog  [-f|--force] [-c|--check] [-d|--debug] [-v|--verbose]"
 
 parser = OptionParser(usage=use)
 parser.add_option("-f", "--force", action="store_true", dest="force", help="Forsuje przełączenie na niezsynchronizowanych macierzach.", default=False)
+parser.add_option("-c", "--check", action="store_true", dest="validate", help="Sprawdza poprawność konfiguracji środowiska.", default=False)
+parser.add_option("-v", "--verbose", action="store_true", dest="verbose", help="Zwiększa gadatliwość.", default=False)
+parser.add_option("-d", "--debug", action="store_true", dest="debug", help="Jeszcze bardziej zwiększa gadatliwość.", default=False)
+parser.add_option("-i", "--config", action="store", type="string", dest="cfgFile", help="Plik konfiguracyjny.", default="config.ini")
 
 (options, args) = parser.parse_args()
+VERBOSE = options.verbose
+DEBUG = options.debug
 
-print(f"Forsowanie: {options.force}")
+
+dbg("MAIN", "Opcje wywołania programu (z domyślnymi):")
+dbg("MAIN", f"Debug:\t{options.debug}")
+dbg("MAIN", f"Forsowanie:\t{options.force}")
+dbg("MAIN", f"Weryfikacja środowiska:\t{options.validate}")
+dbg("MAIN", f"Gadatliwie:\t{options.verbose}")
+dbg("MAIN", f"Konfig:\t{options.cfgFile}")
+
+# Odczyt konfiguracji i parsowanie 
+config = read_config(options.cfgFile)	
+if options.validate:
+	verb("Weryfikacja Środowiska.")
+	validate_env(config)
