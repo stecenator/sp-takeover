@@ -115,6 +115,9 @@ def validate_env(cfg):
 	dbg("validate_env", f"Weryfikacja środowiska.")
 	site = cfg['DEFAULT']['localsite'].lower()
 	verb(f"Sprawdzanie konfiguracji dla site: {site}.")
+
+	# Dopisać sprawdzanie czy config['me'] == hostname
+
 	status_msg(f"Host: {cfg[site]['peer']} dostępny...")
 	dbg("validate_env", f"SSH: {cfg[site]['peer']}, {cfg[site]['peeruser']}, {cfg[site]['peerpass']}")
 	if is_host_alive(cfg[site]['peer'], cfg[site]['peeruser'], cfg[site]['peerpass']):
