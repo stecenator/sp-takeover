@@ -5,6 +5,7 @@ sp-takeover - Przełącza instancję IBM Spectrum Protect ze zdalnego hosta/ośr
 import sys
 import re
 import configparser
+import socket
 import paramiko
 import os
 from optparse import OptionParser
@@ -78,13 +79,13 @@ def is_host_alive(host, user="", passwd=""):
 	""" Sprawdza pingiem czy shot działa, poteam sprawdza, czy możę się tam dostać po ssh."""
 	host_status = False
 	dbg("is_host_alive", f"Pingowanie hosta {host}...")
-	alive = os.system("ping -c 3 " + host)
+	alive = os.system("ping -c 3 " + host + " >/dev/null 2>&1")
 	if alive == 0:
 		dbg("is_host_alive", f"{host}\tŻyje!. Proba logowania po ssh...")
 		ssh = paramiko.SSHClient()
 		try:
 			ssh.load_system_host_keys()
-			ssh.connect(host, user, passwd)
+			ssh.connect(hostname=host, username=user, password=passwd)
 		except BadHostKeyException:
 			err("is_host_alive", f"Coś nie tak z kluczem hosta {host}.")
 			host_status = False
@@ -114,6 +115,7 @@ def validate_env(cfg):
 	site = cfg['DEFAULT']['localsite'].lower()
 	verb(f"Sprawdzanie konfiguracji dla site: {site}.")
 	status_msg(f"Host: {cfg[site]['peer']} dostępny...")
+	dbg("validate_env", f"SSH: {cfg[site]['peer']}, {cfg[site]['peeruser']}, {cfg[site]['peerpass']}")
 	if is_host_alive(cfg[site]['peer'], cfg[site]['peeruser'], cfg[site]['peerpass']):
 		prt_green("Tak")
 	else:
