@@ -5,6 +5,7 @@ sp-takeover - Przełącza instancję IBM Spectrum Protect ze zdalnego hosta/ośr
 import sys
 import re
 import configparser
+import paramiko
 from optparse import OptionParser
 from os.path import isfile
 from os import access, R_OK
@@ -17,12 +18,15 @@ class TxColors:
 	OKGREEN = '\033[92m'
 	WARNING = '\033[93m'
 	FAIL = '\033[91m'
+	RED = '\033[91m'
 	ENDC = '\033[0m'
 	BOLD = '\033[1m'
 	UNDERLINE = '\033[4m'
 
 DEBUG=False
 VERBOSE=False
+
+SITE="none"		# Do indeksowania obiektu config
 
 def dbg(facility, message):
 	""" Wypisuje \"facility:\tmesage\" jezeli program jest wywołany z opcją -d lub --debug."""
@@ -38,6 +42,18 @@ def err(facility, message):
 	""" Wypisuje na stderr komunikat \"facility:\tmesage\". """
 	print(f"{TxColors.FAIL}{facility}:{TxColors.ENDC}\t{message}", file=stderr)
 
+def status_msg(message):
+	""" Wypisuje message bez nowej linii. Daje możliwość wpisania dodtkowego kolorowego statusu npr prt_red lub prt_green """
+		print(message, end='')
+
+def prt_red(message):
+	""" Wypisuje message na czerwono."""
+	print(f"{TxColors.RED}{message}{TxColors.ENDC}")
+
+def prt_green(message):
+	""" Wypisuje message na czerwono."""
+	print(f"{TxColors.RED}{message}{TxColors.ENDC}")
+
 # Funkcje programu
 
 def read_config(cfgFile):
@@ -52,17 +68,52 @@ def read_config(cfgFile):
 		print(sections)
 		site = cfg['DEFAULT']['localsite'].lower()	# bo sekcje i klucze są składowane przez obiek cfg jako lowercase
 		print(f"Site: {site}")
-		# for sec in sections:
-		# 	print(f"[{sec}]")
 		for key in cfg[site]:
 			print(f"{key} :\t{cfg[site][key]}")
 
 	return cfg
 
+def is_host_alive(host, user="", passwd=""):
+	""" Sprawdza pingiem czy shot działa, poteam sprawdza, czy możę się tam dostać po ssh."""
+	host_status = False
+	dbg("is_host_alive", f"Pingowanie hosta {host}...")
+	alive = os.system("ping -c 3 " + host)
+	if alive == 0:
+		dbg("is_host_alive", f"{host}\tŻyje!. Proba logowania po ssh...")
+		ssh = paramiko.SSHClient()
+		try:
+			ssh.load_system_host_keys()
+			ssh.connect(host, user, passwd)
+		except BadHostException:
+			err("is_host_alive", f"Coś nie tak z kluczem hosta {host}.")
+			host_status = False
+		except AuthenticationException:
+			err("is_host_alive", f"Użyszkodnik {user}, hasło albo klucz nie pasują do {host}.")
+			host_status = False
+		except SSHException:
+			err("is_host_alive", f"ssh stroi jakieś inne fochy.")
+			host_status = False
+
+		dbg("is_host_alive", f"Udało się nawiązać sesję SSH z {host}.")
+		ssh.close()
+		host_status = True
+
+	else:
+		dbg("is_host_alive", f"{host} nie pinguje. Trup!")
+		host_status = False
+
+	return host_status
+
 def validate_env(cfg):
 	""" Weryfikuje wszystkie ustawienia na podstawie globalnej zmiennej config utworzenej przez read_config."""
 	dbg("validate_env", f"Weryfikacja środowiska.")
-	# dbg("validate_env", f"Instancja {cfg['cfg'")
+	site = cfg['DEFAULT']['localsite'].lower()
+	verb(f"Sprawdzanie konfiguracji dla site: {site}.")
+	status_msg(f"Host: {cfg[site]['peer']} dostępny...")
+	if is_host_alive(cfg[site]['peer'], cfg[site]['peeruser'], cfg[site]['peerpass']):
+		prt_green("Tak")
+	else
+		prt_red("Nie")
 
 
 # MAIN
@@ -90,6 +141,7 @@ dbg("MAIN", f"Konfig:\t{options.cfgFile}")
 
 # Odczyt konfiguracji i parsowanie 
 config = read_config(options.cfgFile)	
+SITE = config['DEFAULT']['localsite'].lower()		# Bo przyda się do odczytu pozostałuch kluczy z config.ini
 if options.validate:
 	verb("Weryfikacja Środowiska.")
 	validate_env(config)
