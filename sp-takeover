@@ -85,6 +85,7 @@ def is_host_alive(host, user="", passwd=""):
 		ssh = paramiko.SSHClient()
 		try:
 			ssh.load_system_host_keys()
+			ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 			ssh.connect(hostname=host, username=user, password=passwd)
 		except BadHostKeyException:
 			err("is_host_alive", f"Coś nie tak z kluczem hosta {host}.")
