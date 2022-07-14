@@ -44,7 +44,7 @@ def err(facility, message):
 
 def status_msg(message):
 	""" Wypisuje message bez nowej linii. Daje możliwość wpisania dodtkowego kolorowego statusu npr prt_red lub prt_green """
-		print(message, end='')
+	print(message, end='')
 
 def prt_red(message):
 	""" Wypisuje message na czerwono."""
