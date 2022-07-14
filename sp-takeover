@@ -94,6 +94,9 @@ def is_host_alive(host, user="", passwd=""):
 		except SSHException:
 			err("is_host_alive", f"ssh stroi jakieś inne fochy.")
 			host_status = False
+		except socket.error:
+			err("is_host_alive", f"Python stroi jakieś inne fochy.")
+			host_status = False
 
 		dbg("is_host_alive", f"Udało się nawiązać sesję SSH z {host}.")
 		ssh.close()
