@@ -112,7 +112,7 @@ def validate_env(cfg):
 	status_msg(f"Host: {cfg[site]['peer']} dostępny...")
 	if is_host_alive(cfg[site]['peer'], cfg[site]['peeruser'], cfg[site]['peerpass']):
 		prt_green("Tak")
-	else
+	else:
 		prt_red("Nie")
 
 
