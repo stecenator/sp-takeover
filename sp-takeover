@@ -85,7 +85,7 @@ def is_host_alive(host, user="", passwd=""):
 		try:
 			ssh.load_system_host_keys()
 			ssh.connect(host, user, passwd)
-		except BadHostException:
+		except BadHostKeyException:
 			err("is_host_alive", f"Coś nie tak z kluczem hosta {host}.")
 			host_status = False
 		except AuthenticationException:
