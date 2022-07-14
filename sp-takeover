@@ -6,9 +6,10 @@ import sys
 import re
 import configparser
 import paramiko
+import os
 from optparse import OptionParser
 from os.path import isfile
-from os import access, R_OK
+from os import access, R_OK, system
 
 # Klasy, funkcje pomocniczne i zmienne pomocnicze
 class TxColors:
