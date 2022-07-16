@@ -54,7 +54,7 @@ def prt_red(message):
 
 def prt_green(message):
 	""" Wypisuje message na czerwono."""
-	print(f"{TxColors.RED}{message}{TxColors.ENDC}")
+	print(f"{TxColors.OKGREEN}{message}{TxColors.ENDC}")
 
 # Funkcje programu
 
@@ -75,11 +75,18 @@ def read_config(cfgFile):
 
 	return cfg
 
-def is_host_alive(host, user="", passwd=""):
+def is_host_alive(host, user="", passwd="", use_ping=True):
 	""" Sprawdza pingiem czy shot działa, poteam sprawdza, czy możę się tam dostać po ssh."""
 	host_status = False
+	alive = 0
+
 	dbg("is_host_alive", f"Pingowanie hosta {host}...")
-	alive = os.system("ping -c 3 " + host + " >/dev/null 2>&1")
+	if(use_ping):
+		alive = os.system("ping -c 3 " + host + " >/dev/null 2>&1")
+	else:
+		# Udaję, że ping się powiódł
+		alive = 0
+
 	if alive == 0:
 		dbg("is_host_alive", f"{host}\tŻyje!. Proba logowania po ssh...")
 		ssh = paramiko.SSHClient()
@@ -112,20 +119,29 @@ def is_host_alive(host, user="", passwd=""):
 
 def validate_env(cfg):
 	""" Weryfikuje wszystkie ustawienia na podstawie globalnej zmiennej config utworzenej przez read_config."""
+
+	cfg_valid = True 	# Czasem wiadomo, że na pewno jest źle, ale sprawdzam dalej, żeby wyłapać pozostałe błędy. 
+
 	dbg("validate_env", f"Weryfikacja środowiska.")
 	site = cfg['DEFAULT']['localsite'].lower()
 	verb(f"Sprawdzanie konfiguracji dla site: {site}.")
 
-	# Dopisać sprawdzanie czy config['me'] == hostname
+	status_msg("Czy ja to ja?...\t")
+	if( os.uname().nodename == cfg[site]['me']):
+		prt_green("Tak")
+	else:
+		prt_red("Nie")
+		dbg("validate_env", f"Mój hostname {os.uname().nodename}, Według konfigu: {cfg[site]['me']}")
+		cfg_valid = False
 
 	status_msg(f"Host: {cfg[site]['peer']} dostępny...")
 	dbg("validate_env", f"SSH: {cfg[site]['peer']}, {cfg[site]['peeruser']}, {cfg[site]['peerpass']}")
-	if is_host_alive(cfg[site]['peer'], cfg[site]['peeruser'], cfg[site]['peerpass']):
+	if is_host_alive(cfg[site]['peer'], cfg[site]['peeruser'], cfg[site]['peerpass'], cfg[site].getboolean('useping')):
 		prt_green("Tak")
 	else:
 		prt_red("Nie")
 
-
+	return cfg_valid
 # MAIN
 
 use = "Usage: %prog  [-f|--force] [-c|--check] [-d|--debug] [-v|--verbose]"
@@ -152,6 +168,8 @@ dbg("MAIN", f"Konfig:\t{options.cfgFile}")
 # Odczyt konfiguracji i parsowanie 
 config = read_config(options.cfgFile)	
 SITE = config['DEFAULT']['localsite'].lower()		# Bo przyda się do odczytu pozostałuch kluczy z config.ini
+
+verb("Weryfikacja Środowiska.")
+cfg_valid = validate_env(config)
 if options.validate:
-	verb("Weryfikacja Środowiska.")
-	validate_env(config)
+	exit
