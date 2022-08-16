@@ -6,11 +6,15 @@ import sys
 import re
 import configparser
 import socket
+# Bo Paramiko marudzi, że mam stare SSH na RH7
+import warnings 
+warnings.filterwarnings(action='ignore',module='.*paramiko.*')
 import paramiko
 import os
 from optparse import OptionParser
 from os.path import isfile
 from os import access, R_OK, system
+import subprocess
 
 # Klasy, funkcje pomocniczne i zmienne pomocnicze
 class TxColors:
@@ -76,7 +80,7 @@ def read_config(cfgFile):
 	return cfg
 
 def is_host_alive(host, user="", passwd="", use_ping=True):
-	""" Sprawdza pingiem czy shot działa, poteam sprawdza, czy możę się tam dostać po ssh."""
+	""" Sprawdza pingiem czy host działa, potem sprawdza, czy może się tam dostać po ssh."""
 	host_status = False
 	alive = 0
 
@@ -117,6 +121,15 @@ def is_host_alive(host, user="", passwd="", use_ping=True):
 
 	return host_status
 
+def is_service_running(service):
+	""" Sprawdza czy usługa service działa na bieżącym hoscie. """
+	dbg("is_service_running", f"Sprawdzanie, czy usługa {service} działa")
+	result = subprocess.run(["systemctl", "status", service])
+	if result.returncode == 0:
+		return True
+	else:
+		return False
+
 def validate_env(cfg):
 	""" Weryfikuje wszystkie ustawienia na podstawie globalnej zmiennej config utworzenej przez read_config."""
 
@@ -141,7 +154,16 @@ def validate_env(cfg):
 	else:
 		prt_red("Nie")
 
+	status_msg(f"Czy {cfg[site]['spinst']} działa:\t")
+	if is_service_running(cfg[site]['spinst']):
+		prt_red("Tak")
+		cfg_valid = False
+	else:
+		prt_green("Nie")
+			
 	return cfg_valid
+
+
 # MAIN
 
 use = "Usage: %prog  [-f|--force] [-c|--check] [-d|--debug] [-v|--verbose]"
@@ -171,5 +193,10 @@ SITE = config['DEFAULT']['localsite'].lower()		# Bo przyda się do odczytu pozos
 
 verb("Weryfikacja Środowiska.")
 cfg_valid = validate_env(config)
+status_msg("Konfiguracja:\t")
+if cfg_valid:
+	prt_green("Poprawna")
+else:
+	prt_red("Błędna")
 if options.validate:
 	exit
